@@ -1,5 +1,7 @@
-// NOTE: Getting started の通りに丸ごと書き換えたもの。
-//       https://shopify.dev/apps/getting-started/build-app-example/frontend
+/*
+  NOTE: Getting started の通りにコピペしたもの。
+        https://shopify.dev/apps/getting-started/build-app-example/frontend
+*/
 import { useNavigate, TitleBar, Loading } from "@shopify/app-bridge-react";
 import {
   Card,

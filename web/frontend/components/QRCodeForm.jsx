@@ -1,5 +1,7 @@
-// NOTE: Getting started の通りに丸ごとコピペしたもの。
-//       https://shopify.dev/apps/getting-started/build-app-example/frontend
+/*
+  NOTE: Getting started の通りにコピペしたもの。
+        https://shopify.dev/apps/getting-started/build-app-example/frontend
+*/
 import { useState, useCallback } from "react";
 import {
   Banner,
