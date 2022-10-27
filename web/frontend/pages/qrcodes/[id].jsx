@@ -11,7 +11,7 @@ export default function QRCodeEdit() {
      These are mock values.
      Set isLoading to false to preview the page without loading markup.
   */
-  const isLoading = true;
+  const isLoading = false;
   const isRefetching = false;
   const QRCode = {
     createdAt: "2022-06-13",
