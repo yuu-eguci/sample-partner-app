@@ -12,6 +12,8 @@ import productCreator from "./helpers/product-creator.js";
 import redirectToAuth from "./helpers/redirect-to-auth.js";
 import { BillingInterval } from "./helpers/ensure-billing.js";
 import { AppInstallations } from "./app_installations.js";
+import applyQrCodeApiEndpoints from "./middleware/qr-code-api.js";
+import { QRCodesDB } from "./qr-codes-db.js";
 
 const USE_ONLINE_TOKENS = false;
 
@@ -21,7 +23,11 @@ const PORT = parseInt(process.env.BACKEND_PORT || process.env.PORT, 10);
 const DEV_INDEX_PATH = `${process.cwd()}/frontend/`;
 const PROD_INDEX_PATH = `${process.cwd()}/frontend/dist/`;
 
-const DB_PATH = `${process.cwd()}/database.sqlite`;
+const dbFile = join(process.cwd(), "database.sqlite");
+const sessionDb = new Shopify.Session.SQLiteSessionStorage(dbFile);
+// Initialize SQLite DB
+QRCodesDB.db = sessionDb.db;
+QRCodesDB.init();
 
 Shopify.Context.initialize({
   API_KEY: process.env.SHOPIFY_API_KEY,
@@ -31,10 +37,7 @@ Shopify.Context.initialize({
   HOST_SCHEME: process.env.HOST.split("://")[0],
   API_VERSION: LATEST_API_VERSION,
   IS_EMBEDDED_APP: true,
-  // This should be replaced with your preferred storage strategy
-  // See note below regarding using CustomSessionStorage with this template.
-  SESSION_STORAGE: new Shopify.Session.SQLiteSessionStorage(DB_PATH),
-  ...(process.env.SHOP_CUSTOM_DOMAIN && {CUSTOM_SHOP_DOMAINS: [process.env.SHOP_CUSTOM_DOMAIN]}),
+  SESSION_STORAGE: sessionDb,
 });
 
 // NOTE: If you choose to implement your own storage strategy using
@@ -122,28 +125,11 @@ export async function createServer(
     res.status(200).send(countData);
   });
 
-  app.get("/api/products/create", async (req, res) => {
-    const session = await Shopify.Utils.loadCurrentSession(
-      req,
-      res,
-      app.get("use-online-tokens")
-    );
-    let status = 200;
-    let error = null;
-
-    try {
-      await productCreator(session);
-    } catch (e) {
-      console.log(`Failed to process products/create: ${e.message}`);
-      status = 500;
-      error = e.message;
-    }
-    res.status(status).send({ success: status === 200, error });
-  });
-
   // All endpoints after this point will have access to a request.body
   // attribute, as a result of the express.json() middleware
   app.use(express.json());
+
+  applyQrCodeApiEndpoints(app);
 
   app.use((req, res, next) => {
     const shop = Shopify.Utils.sanitizeShop(req.query.shop);
