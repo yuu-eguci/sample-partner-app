@@ -77,7 +77,7 @@ export default function HomePage() {
   return (
     <Page fullWidth={!!qrCodesMarkup}>
       <TitleBar
-        title="QR codes"
+        title="💙 QR codes 💙"
         primaryAction={{
           content: "Create QR code",
           onAction: () => navigate("/qrcodes/new"),
