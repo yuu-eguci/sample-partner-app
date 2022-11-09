@@ -1,0 +1,11 @@
+FROM node:18-alpine
+
+# 本番用では npm run build のために ARG SHOPIFY_API_KEY が必要。
+# この開発用 Dockerfile では、 build を CMD で行う
+# (ソースを image へコピーしないので RUN で build するのは不可) ため、
+# ARG は不要。
+EXPOSE 8081
+WORKDIR /app
+# npm run build と npm run serve のために環境変数が必要。
+# SHOPIFY_API_KEY, SHOPIFY_API_SECRET, SCOPES, HOST, PORT
+CMD ["sh", "-c", "npm install && cd frontend && npm install && npm run build && cd .. && npm run serve"]
