@@ -12,6 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      # ドキュメント通りにやっていたらこの yml は動作しない。
+      #     https://shopify.dev/apps/tools/cli/ci-cd
+      # ruby が必要。
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: 2.7.5
