@@ -1,19 +1,31 @@
-name: Deploy Shopify Custom App Extensions
+name: Deploy extension
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+  pull_request:
 
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    environment: production
-
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - run: yarn install
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'yarn'
 
-    - run: yarn deploy --api-key ${{ secrets.SHOPIFY_API_KEY }}
+      - name: Install npm dependencies
+        run: yarn install
+
+      - name: Deploy
+        env:
+          # Token from the Partner Dashboard
+          SHOPIFY_CLI_PARTNERS_TOKEN: ${{ secrets.SHOPIFY_CLI_PARTNERS_TOKEN_EXPIRES_IN_SOME_MONTHS }}
+          # .env content after a deploy
+          SHOPIFY_API_KEY: ${{ secrets.SHOPIFY_API_KEY }}
+          SHOPIFY_MY_EXTENSION_ID: ${{ secrets.SHOPIFY_MY_EXTENSION_ID }}
+        run: yarn deploy
