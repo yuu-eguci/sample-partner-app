@@ -18,6 +18,8 @@ export default function verifyRequest(
   { billing = { required: false } } = { billing: { required: false } }
 ) {
   return async (req, res, next) => {
+    console.info(`Someone accessed "${req.method} ${req.baseUrl}" from ip "${req.ip}"`)
+
     const session = await Shopify.Utils.loadCurrentSession(
       req,
       res,
