@@ -1,0 +1,19 @@
+name: Deploy Shopify Custom App Extensions
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - run: yarn install
+
+    - run: yarn deploy --api-key ${{ secrets.SHOPIFY_API_KEY }}
