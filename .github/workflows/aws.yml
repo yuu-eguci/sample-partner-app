@@ -26,9 +26,9 @@
 
 name: Deploy to Amazon ECS
 
+# NOTE: 一時停止中。デプロイ先を変更する作業のため。
 on:
   push:
-    branches: [ "main" ]
 
 env:
   AWS_REGION: ap-northeast-1                   # set this to your preferred AWS region, e.g. us-west-1
