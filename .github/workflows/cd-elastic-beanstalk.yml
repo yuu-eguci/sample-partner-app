@@ -59,7 +59,7 @@ jobs:
     #       S3 内でフォルダ分けしていますが、効果があるのかはわかりません。
     - run: |
         aws s3 cp deploy_package.zip \
-        s3://${{ env.AWS_S3_NAME }}/${{ env.AWS_EB_APP_NAME }}/${{ env.AWS_EB_ENV_NAME }}
+        s3://${{ env.AWS_S3_NAME }}/${{ env.AWS_EB_APP_NAME }}/${{ env.AWS_EB_ENV_NAME }}/
 
     - run: |
         aws elasticbeanstalk create-application-version \
