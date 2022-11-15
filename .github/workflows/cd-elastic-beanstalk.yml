@@ -1,0 +1,72 @@
+# Elastic Beanstalk 環境へのデプロイを行います。
+name: cd-elastic-beanstalk
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+env:
+  # Elastic Beanstalk 環境のバージョン。
+  NODE_VERSION: 16.x
+  AWS_REGION: ap-northeast-1
+  SHOPIFY_API_KEY: ${{ secrets.SHOPIFY_API_KEY }}
+  AWS_EB_APP_NAME: ${{ secrets.AWS_EB_APP_NAME }}
+  AWS_EB_ENV_NAME: ${{ secrets.SAMPLE_ENV_NAME }}
+  AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+  AWS_S3_NAME: ${{ secrets.AWS_S3_NAME }}
+
+jobs:
+  deploy-to-elastic-beanstalk:
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: npm
+
+    # Dockerfile の RUN にあたるもの。
+    - run: |
+        npm ci && cd frontend && npm install && npm run build
+      env:
+        SHOPIFY_API_KEY: ${{ env.SHOPIFY_API_KEY }}
+
+    - run: zip deploy_package.zip . -r -x *.git/* *.github/*
+
+    # NOTE: 下記の認証、 S3 への UL にはすべて Role の権限を利用します。
+    # NOTE: v1-node16 については、この通り↓
+    #       https://github.com/aws-actions/configure-aws-credentials#notice-node12-deprecation-warning
+    - uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+        role-session-name: deploy-role-session
+        aws-region: ${{ env.AWS_REGION }}
+
+    - run: aws sts get-caller-identity
+
+    # NOTE: なんとなく別環境用の zip と混ざるのを嫌って
+    #       S3 内でフォルダ分けしていますが、効果があるのかはわかりません。
+    - run: |
+        aws s3 cp deploy_package.zip \
+        s3://${{ env.AWS_S3_NAME }}/${{ env.AWS_EB_APP_NAME }}/${{ env.AWS_EB_ENV_NAME }}
+
+    - run: |
+        aws elasticbeanstalk create-application-version \
+        --application-name "${{ env.AWS_EB_APP_NAME }}" \
+        --source-bundle S3Bucket="${{ env.AWS_S3_NAME }}",\
+        S3Key="${{ env.AWS_EB_APP_NAME }}/${{ env.AWS_EB_ENV_NAME }}/deploy_package.zip" \
+        --version-label "${{ github.sha }}"
+
+    - run: |
+        aws elasticbeanstalk update-environment - ${{ env.AWS_EB_ENV_NAME }}
