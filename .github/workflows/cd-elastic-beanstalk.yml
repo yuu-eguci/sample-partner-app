@@ -38,11 +38,12 @@ jobs:
 
     # Dockerfile の RUN にあたるもの。
     - run: |
-        cd web && npm ci && cd frontend && npm ci && npm run build
+        ls && cd web && npm ci && cd frontend && npm ci && npm run build
       env:
         SHOPIFY_API_KEY: ${{ env.SHOPIFY_API_KEY }}
 
-    - run: zip deploy_package.zip ./web -r
+    - run: |
+        ls && cd web && zip deploy_package.zip . -r
 
     # NOTE: 下記の認証、 S3 への UL にはすべて Role の権限を利用します。
     # NOTE: v1-node16 については、この通り↓
