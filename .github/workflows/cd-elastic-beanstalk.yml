@@ -43,8 +43,9 @@ jobs:
       env:
         SHOPIFY_API_KEY: ${{ env.SHOPIFY_API_KEY }}
 
+    # 本リポジトリはシンボリックリンクを含む。 -y によってシンボリックリンクをそのままに zip へ格納する。
     - run: |
-        cd web && zip deploy_package.zip . -r
+        cd web && zip deploy_package.zip . -ry
 
     # NOTE: 下記の認証、 S3 への UL にはすべて Role の権限を利用します。
     # NOTE: v1-node16 については、この通り↓
