@@ -39,7 +39,7 @@ jobs:
     # Dockerfile の RUN にあたるもの。
     # 本リポジトリでは、デプロイするパッケージは ./web 以下なので、すべて web 以下で行う。
     - run: |
-        cd web && npm ci && cd frontend && npm ci && npm run build
+        cd web && npm install && cd frontend && npm install && npm run build
       env:
         SHOPIFY_API_KEY: ${{ env.SHOPIFY_API_KEY }}
 
