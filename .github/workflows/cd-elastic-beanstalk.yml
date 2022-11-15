@@ -37,13 +37,14 @@ jobs:
         cache: npm
 
     # Dockerfile の RUN にあたるもの。
+    # 本リポジトリでは、デプロイするパッケージは ./web 以下なので、すべて web 以下で行う。
     - run: |
-        ls && cd web && npm ci && cd frontend && npm ci && npm run build
+        cd web && npm ci && cd frontend && npm ci && npm run build
       env:
         SHOPIFY_API_KEY: ${{ env.SHOPIFY_API_KEY }}
 
     - run: |
-        ls && cd web && zip deploy_package.zip . -r
+        cd web && zip deploy_package.zip . -r
 
     # NOTE: 下記の認証、 S3 への UL にはすべて Role の権限を利用します。
     # NOTE: v1-node16 については、この通り↓
@@ -59,7 +60,7 @@ jobs:
     # NOTE: なんとなく別環境用の zip と混ざるのを嫌って
     #       S3 内でフォルダ分けしていますが、効果があるのかはわかりません。
     - run: |
-        aws s3 cp deploy_package.zip \
+        cd web && aws s3 cp deploy_package.zip \
         s3://${{ env.AWS_S3_NAME }}/${{ env.AWS_EB_APP_NAME }}/${{ env.AWS_EB_ENV_NAME }}/
 
     - run: |
