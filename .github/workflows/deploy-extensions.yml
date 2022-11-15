@@ -2,7 +2,7 @@ name: Deploy extension
 
 # NOTE: 一時停止中。デプロイ先を変更する作業のため。
 on:
-  push:
+  workflow_dispatch:
 
 jobs:
   deploy:
