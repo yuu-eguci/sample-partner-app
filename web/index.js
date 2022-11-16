@@ -19,8 +19,6 @@ import applyQrCodePublicEndpoints from "./middleware/qr-code-public.js";
 const USE_ONLINE_TOKENS = false;
 
 const PORT = parseInt(process.env.BACKEND_PORT || process.env.PORT, 10);
-console.info({ env: process.env })
-console.info({ PORT })
 
 // TODO: There should be provided by env vars
 const DEV_INDEX_PATH = `${process.cwd()}/frontend/`;
@@ -130,6 +128,10 @@ export async function createServer(
     res.status(200).send(countData);
   });
 
+  app.get("/health", async (req, res) => {
+    res.status(200).send("");
+  });
+
   // All endpoints after this point will have access to a request.body
   // attribute, as a result of the express.json() middleware
   app.use(express.json());
@@ -195,5 +197,4 @@ export async function createServer(
   return { app };
 }
 
-console.info({ PORT })
 createServer().then(({ app }) => app.listen(PORT));
