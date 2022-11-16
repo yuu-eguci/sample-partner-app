@@ -37,15 +37,33 @@ jobs:
         cache: npm
 
     # Dockerfile の RUN にあたるもの。
-    # 本リポジトリでは、デプロイするパッケージは ./web 以下なので、すべて web 以下で行う。
+    # web 直下の依存パッケージをインストールします。
+    # npm install sqlite3 では、 napi-v6-linux-glibc-arm64 を入手できない。
+    # 公式サイトを参考に arm64 用のモジュールを入手する。
+    # https://www.npmjs.com/package/sqlite3
     - run: |
-        cd web && npm install && cd frontend && npm install && npm run build
+        cd web
+        pwd
+        npm ci
+        cd node_modules/sqlite3/lib/binding
+        curl -OL https://github.com/TryGhost/node-sqlite3/releases/download/v5.1.2/napi-v6-linux-glibc-arm64.tar.gz
+        tar -xvf napi-v6-linux-glibc-arm64.tar.gz
+
+    # こちらも Dockerfile の RUN にあたるもの。
+    # web/frontend 直下をビルドします。
+    - run: |
+        cd web/frontend
+        pwd
+        npm ci
+        npm run build
       env:
         SHOPIFY_API_KEY: ${{ env.SHOPIFY_API_KEY }}
 
     # 本リポジトリはシンボリックリンクを含む。 -y によってシンボリックリンクをそのままに zip へ格納する。
     - run: |
-        cd web && zip deploy_package.zip . -ry
+        cd web
+        pwd
+        zip deploy_package.zip . -ry
 
     # NOTE: 下記の認証、 S3 への UL にはすべて Role の権限を利用します。
     # NOTE: v1-node16 については、この通り↓
@@ -61,18 +79,19 @@ jobs:
     # NOTE: なんとなく別環境用の zip と混ざるのを嫌って
     #       S3 内でフォルダ分けしていますが、効果があるのかはわかりません。
     - run: |
-        cd web && aws s3 cp deploy_package.zip \
-        s3://${{ env.AWS_S3_NAME }}/${{ env.AWS_EB_APP_NAME }}/${{ env.AWS_EB_ENV_NAME }}/
+        cd web
+        pwd
+        aws s3 cp deploy_package.zip \
+          s3://${{ env.AWS_S3_NAME }}/${{ env.AWS_EB_APP_NAME }}/${{ env.AWS_EB_ENV_NAME }}/
 
     - run: |
         aws elasticbeanstalk create-application-version \
-        --application-name ${{ env.AWS_EB_APP_NAME }} \
-        --source-bundle S3Bucket="${{ env.AWS_S3_NAME }}",\
-        S3Key="${{ env.AWS_EB_APP_NAME }}/${{ env.AWS_EB_ENV_NAME }}/deploy_package.zip" \
-        --version-label "${{ github.sha }}"
+          --application-name ${{ env.AWS_EB_APP_NAME }} \
+          --source-bundle S3Bucket=${{ env.AWS_S3_NAME }},S3Key=${{ env.AWS_EB_APP_NAME }}/${{ env.AWS_EB_ENV_NAME }}/deploy_package.zip \
+          --version-label ${{ github.sha }}
 
     - run: |
         aws elasticbeanstalk update-environment \
-        --application-name ${{ env.AWS_EB_APP_NAME }} \
-        --environment-name ${{ env.AWS_EB_ENV_NAME }} \
-        --version-label "${{ github.sha }}"
+          --application-name ${{ env.AWS_EB_APP_NAME }} \
+          --environment-name ${{ env.AWS_EB_ENV_NAME }} \
+          --version-label ${{ github.sha }}
