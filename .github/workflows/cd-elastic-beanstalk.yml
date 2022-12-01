@@ -2,10 +2,6 @@
 name: cd-elastic-beanstalk
 
 on:
-  push:
-    branches:
-      - main
-
   workflow_dispatch:
 
 env:
