@@ -4,7 +4,7 @@
 */
 import { useNavigate, TitleBar, Loading } from "@shopify/app-bridge-react";
 import {
-  Card,
+  LegacyCard,
   EmptyState,
   Layout,
   Page,
@@ -44,16 +44,16 @@ export default function HomePage() {
 
   /* loadingMarkup uses the loading component from AppBridge and components from Polaris  */
   const loadingMarkup = isLoading ? (
-    <Card sectioned>
+    <LegacyCard sectioned>
       <Loading />
       <SkeletonBodyText />
-    </Card>
+    </LegacyCard>
   ) : null;
 
   /* Use Polaris Card and EmptyState components to define the contents of the empty state */
   const emptyStateMarkup =
     !isLoading && !QRCodes?.length ? (
-      <Card sectioned>
+      <LegacyCard sectioned>
         <EmptyState
           heading="Create unique QR codes for your product"
           /* This button will take the user to a Create a QR code page */
@@ -67,7 +67,7 @@ export default function HomePage() {
             Allow customers to scan codes and buy products using their phones.
           </p>
         </EmptyState>
-      </Card>
+      </LegacyCard>
     ) : null;
 
   /*

@@ -4,15 +4,15 @@
 */
 import { useNavigate } from "@shopify/app-bridge-react";
 import {
-  Card,
+  LegacyCard,
   Icon,
   IndexTable,
-  Stack,
-  TextStyle,
+  LegacyStack,
+  Text,
   Thumbnail,
   UnstyledLink,
 } from "@shopify/polaris";
-import { DiamondAlertMajor, ImageMajor } from "@shopify/polaris-icons";
+import { AlertDiamondIcon, ImageIcon } from "@shopify/polaris-icons";
 
 /* useMedia is used to support multiple screen sizes */
 import { useMedia } from "@shopify/react-hooks";
@@ -35,39 +35,38 @@ function SmallScreenCard({
       <div
         style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #E1E3E5" }}
       >
-        <Stack>
-          <Stack.Item>
+        <LegacyStack>
+          <LegacyStack.Item>
             <Thumbnail
-              source={product?.images?.edges[0]?.node?.url || ImageMajor}
+              source={product?.images?.edges[0]?.node?.url || ImageIcon}
               alt="placeholder"
-              color="base"
               size="small"
             />
-          </Stack.Item>
-          <Stack.Item fill>
-            <Stack vertical={true}>
-              <Stack.Item>
+          </LegacyStack.Item>
+          <LegacyStack.Item fill>
+            <LegacyStack vertical={true}>
+              <LegacyStack.Item>
                 <p>
-                  <TextStyle variation="strong">
+                  <Text as="span" fontWeight="bold">
                     {truncate(title, 35)}
-                  </TextStyle>
+                  </Text>
                 </p>
                 <p>{truncate(product?.title, 35)}</p>
                 <p>{dayjs(createdAt).format("MMMM D, YYYY")}</p>
-              </Stack.Item>
+              </LegacyStack.Item>
               <div style={{ display: "flex" }}>
                 <div style={{ flex: "3" }}>
-                  <TextStyle variation="subdued">Discount</TextStyle>
+                  <Text as="span" tone="subdued">Discount</Text>
                   <p>{discountCode || "-"}</p>
                 </div>
                 <div style={{ flex: "2" }}>
-                  <TextStyle variation="subdued">Scans</TextStyle>
+                  <Text as="span" tone="subdued">Scans</Text>
                   <p>{scans}</p>
                 </div>
               </div>
-            </Stack>
-          </Stack.Item>
-        </Stack>
+            </LegacyStack>
+          </LegacyStack.Item>
+        </LegacyStack>
       </div>
     </UnstyledLink>
   );
@@ -105,9 +104,8 @@ export function QRCodeIndex({ QRCodes, loading }) {
         >
           <IndexTable.Cell>
             <Thumbnail
-              source={product?.images?.edges[0]?.node?.url || ImageMajor}
+              source={product?.images?.edges[0]?.node?.url || ImageIcon}
               alt="placeholder"
-              color="base"
               size="small"
             />
           </IndexTable.Cell>
@@ -117,14 +115,14 @@ export function QRCodeIndex({ QRCodes, loading }) {
             </UnstyledLink>
           </IndexTable.Cell>
           <IndexTable.Cell>
-            <Stack>
+            <LegacyStack>
               {deletedProduct && (
-                <Icon source={DiamondAlertMajor} color="critical" />
+                <Icon source={AlertDiamondIcon} tone="critical" />
               )}
-              <TextStyle variation={deletedProduct ? "negative" : null}>
+              <Text as="span" tone={deletedProduct ? "critical" : undefined}>
                 {truncate(product?.title, 25)}
-              </TextStyle>
-            </Stack>
+              </Text>
+            </LegacyStack>
           </IndexTable.Cell>
           <IndexTable.Cell>{discountCode}</IndexTable.Cell>
           <IndexTable.Cell>
@@ -138,7 +136,7 @@ export function QRCodeIndex({ QRCodes, loading }) {
 
   /* A layout for small screens, built using Polaris components */
   return (
-    <Card>
+    <LegacyCard>
       {isSmallScreen ? (
         smallScreenMarkup
       ) : (
@@ -159,7 +157,7 @@ export function QRCodeIndex({ QRCodes, loading }) {
           {rowMarkup}
         </IndexTable>
       )}
-    </Card>
+    </LegacyCard>
   );
 }
 

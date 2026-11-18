@@ -10,3 +10,5 @@ web/frontend/dist
 mock
 web/test
 web/vitest.config.js
+web/frontend/test
+web/frontend/vitest.config.js

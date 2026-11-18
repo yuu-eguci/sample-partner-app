@@ -1,19 +1,24 @@
+import { useState } from "react";
 import {
   QueryClient,
   QueryClientProvider,
   QueryCache,
   MutationCache,
-} from "react-query";
+} from "@tanstack/react-query";
 
 /**
- * Sets up the QueryClientProvider from react-query.
- * @desc See: https://react-query.tanstack.com/reference/QueryClientProvider#_top
+ * Sets up the QueryClientProvider from TanStack Query.
+ * @desc See: https://tanstack.com/query/v5/docs/framework/react/reference/QueryClientProvider
  */
 export function QueryProvider({ children }) {
-  const client = new QueryClient({
-    queryCache: new QueryCache(),
-    mutationCache: new MutationCache(),
-  });
+  // Keep the same client (and its cache) across re-renders.
+  const [client] = useState(
+    () =>
+      new QueryClient({
+        queryCache: new QueryCache(),
+        mutationCache: new MutationCache(),
+      })
+  );
 
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
