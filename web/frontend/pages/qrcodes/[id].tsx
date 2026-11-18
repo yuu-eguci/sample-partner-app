@@ -8,6 +8,7 @@ import { QRCodeForm } from "../../components";
 
 import { useParams } from "react-router-dom";
 import { useAppQuery } from "../../hooks";
+import type { QRCode as QRCodeData } from "../../types";
 
 export default function QRCodeEdit() {
   const breadcrumbs = [{ content: "QR codes", url: "/" }];
@@ -23,7 +24,7 @@ export default function QRCodeEdit() {
     data: QRCode,
     isLoading,
     isRefetching,
-  } = useAppQuery({
+  } = useAppQuery<QRCodeData>({
     url: `/api/qrcodes/${id}`,
     reactQueryOptions: {
       /* Disable refetching because the QRCodeForm component ignores changes to its props */
@@ -38,7 +39,6 @@ export default function QRCodeEdit() {
         <TitleBar
           title="Edit QR code"
           breadcrumbs={breadcrumbs}
-          primaryAction={null}
         />
         <Loading />
         <Layout>
@@ -71,7 +71,6 @@ export default function QRCodeEdit() {
       <TitleBar
         title="Edit QR code"
         breadcrumbs={breadcrumbs}
-        primaryAction={null}
       />
       <QRCodeForm QRCode={QRCode} />
     </Page>

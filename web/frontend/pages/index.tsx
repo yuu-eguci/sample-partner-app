@@ -12,6 +12,7 @@ import {
 } from "@shopify/polaris";
 import { QRCodeIndex } from "../components";
 import { useAppQuery } from "../hooks";
+import type { QRCode } from "../types";
 
 export default function HomePage() {
   /*
@@ -33,7 +34,7 @@ export default function HomePage() {
       This ensures a performant UX.
     */
     isRefetching,
-  } = useAppQuery({
+  } = useAppQuery<QRCode[]>({
     url: "/api/qrcodes",
   });
 

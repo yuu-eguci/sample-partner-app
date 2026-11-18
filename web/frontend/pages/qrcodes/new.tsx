@@ -14,7 +14,6 @@ export default function ManageCode() {
       <TitleBar
         title="Create new QR code"
         breadcrumbs={breadcrumbs}
-        primaryAction={null}
       />
       <QRCodeForm />
     </Page>

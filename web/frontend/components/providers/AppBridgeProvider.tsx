@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Provider } from "@shopify/app-bridge-react";
 import { Banner, Layout, Page } from "@shopify/polaris";
@@ -12,12 +12,12 @@ import { Banner, Layout, Page } from "@shopify/polaris";
  *
  * See: https://shopify.dev/apps/tools/app-bridge/react-components
  */
-export function AppBridgeProvider({ children }) {
+export function AppBridgeProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const history = useMemo(
     () => ({
-      replace: (path) => {
+      replace: (path: string) => {
         navigate(path, { replace: true });
       },
     }),
@@ -42,14 +42,14 @@ export function AppBridgeProvider({ children }) {
     window.__SHOPIFY_DEV_HOST = host;
 
     return {
-      host,
-      apiKey: process.env.SHOPIFY_API_KEY,
+      host: host ?? "",
+      apiKey: process.env.SHOPIFY_API_KEY ?? "",
       forceRedirect: true,
     };
   });
 
-  if (!process.env.SHOPIFY_API_KEY || !appBridgeConfig.host) {
-    const bannerProps = !process.env.SHOPIFY_API_KEY
+  if (!appBridgeConfig.apiKey || !appBridgeConfig.host) {
+    const bannerProps = !appBridgeConfig.apiKey
       ? {
           title: "Missing Shopify API Key",
           children: (

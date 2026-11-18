@@ -1,5 +1,5 @@
 import { BrowserRouter } from "react-router-dom";
-import Routes from "./Routes";
+import Routes, { type PageModule } from "./Routes";
 
 import {
   AppBridgeProvider,
@@ -10,7 +10,7 @@ import {
 export default function App() {
   // Any .tsx or .jsx files in /pages will become a route
   // See documentation for <Routes /> for more info
-  const pages = import.meta.glob(
+  const pages = import.meta.glob<PageModule>(
     ["./pages/**/*.[jt]sx", "!./pages/**/*.test.[jt]sx"],
     { eager: true }
   );

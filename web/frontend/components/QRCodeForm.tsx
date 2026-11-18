@@ -26,12 +26,32 @@ import {
   useNavigate,
 } from "@shopify/app-bridge-react";
 import { ImageIcon, AlertCircleIcon } from "@shopify/polaris-icons";
+import type {
+  Product,
+  SelectPayload,
+} from "@shopify/app-bridge/actions/ResourcePicker";
 
 /* Import the useAuthenticatedFetch hook included in the Node app template */
 import { useAuthenticatedFetch, useAppQuery } from "../hooks";
 
 /* Import custom hooks for forms */
-import { useForm, useField, notEmptyString } from "@shopify/react-form";
+import {
+  useForm,
+  useField,
+  notEmptyString,
+  submitSuccess,
+} from "@shopify/react-form";
+
+import type { DiscountsResponse, QRCode as QRCodeData } from "../types";
+
+/* 選択中の商品です。API から取得した商品と、リソースピッカーで選んだ商品とで画像の形が異なります。 */
+interface SelectedProduct {
+  title: string;
+  handle?: string;
+  images?:
+    | { edges: { node: { url: string } }[] }
+    | { originalSrc: string; altText?: string }[];
+}
 
 const NO_DISCOUNT_OPTION = { label: "No discount", value: "" };
 
@@ -40,22 +60,35 @@ const NO_DISCOUNT_OPTION = { label: "No discount", value: "" };
 
   This variable will only have a value after retrieving discount codes from the API.
 */
-const DISCOUNT_CODES = {};
+const DISCOUNT_CODES: Record<string, string> = {};
 
-export function QRCodeForm({ QRCode: InitialQRCode }) {
+export function QRCodeForm({
+  QRCode: InitialQRCode,
+}: {
+  QRCode?: QRCodeData;
+}) {
   const [QRCode, setQRCode] = useState(InitialQRCode);
   const [showResourcePicker, setShowResourcePicker] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(QRCode?.product);
+  const [selectedProduct, setSelectedProduct] = useState<
+    SelectedProduct | undefined
+  >(QRCode?.product);
   const navigate = useNavigate();
   const appBridge = useAppBridge();
   const fetch = useAuthenticatedFetch();
   const deletedProduct = QRCode?.product?.title === "Deleted product";
 
   const onSubmit = useCallback(
-    (body) => {
+    async (body: {
+      title: string;
+      productId: string;
+      variantId: string;
+      handle: string;
+      destination: string[];
+      discountId: string;
+      discountCode: string;
+    }) => {
       (async () => {
-        const parsedBody = body;
-        parsedBody.destination = parsedBody.destination[0];
+        const parsedBody = { ...body, destination: body.destination[0] };
         const QRCodeId = QRCode?.id;
         /* construct the appropriate URL to send the API request to based on whether the QR code is new or being updated */
         const url = QRCodeId ? `/api/qrcodes/${QRCodeId}` : "/api/qrcodes";
@@ -69,7 +102,7 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
         });
         if (response.ok) {
           makeClean();
-          const QRCode = await response.json();
+          const QRCode: QRCodeData = await response.json();
           /* if this is a new QR code, then save the QR code and navigate to the edit page; this behavior is the standard when saving resources in the Shopify admin */
           if (!QRCodeId) {
             navigate(`/qrcodes/${QRCode.id}`);
@@ -79,7 +112,7 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
           }
         }
       })();
-      return { status: "success" };
+      return submitSuccess();
     },
     [QRCode, setQRCode]
   );
@@ -131,7 +164,7 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
 
   const QRCodeURL = QRCode
     ? new URL(`/qrcodes/${QRCode.id}/image`, location.toString()).toString()
-    : null;
+    : undefined;
 
   /*
     This function is called with the selected product whenever the user clicks "Add" in the ResourcePicker.
@@ -142,22 +175,24 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
 
     Finally, closes the ResourcePicker.
   */
-  const handleProductChange = useCallback(({ selection }) => {
+  const handleProductChange = useCallback(({ selection }: SelectPayload) => {
+    /* resourceType="Product" のため、選択されるのは商品です。 */
+    const product = selection[0] as Product;
     setSelectedProduct({
-      title: selection[0].title,
-      images: selection[0].images,
-      handle: selection[0].handle,
+      title: product.title,
+      images: product.images,
+      handle: product.handle,
     });
-    productId.onChange(selection[0].id);
-    variantId.onChange(selection[0].variants[0].id);
-    handle.onChange(selection[0].handle);
+    productId.onChange(product.id);
+    variantId.onChange(product.variants[0]?.id ?? "");
+    handle.onChange(product.handle);
     setShowResourcePicker(false);
   }, []);
 
   /*
     This function updates the form state whenever a user selects a new discount option.
   */
-  const handleDiscountChange = useCallback((id) => {
+  const handleDiscountChange = useCallback((id: string) => {
     discountId.onChange(id);
     discountCode.onChange(DISCOUNT_CODES[id] || "");
   }, []);
@@ -174,6 +209,7 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
 
   const [isDeleting, setIsDeleting] = useState(false);
   const deleteQRCode = useCallback(async () => {
+    if (!QRCode) return;
     reset();
     /* The isDeleting state disables the download button and the delete QR code button to show the merchant that an action is in progress */
     setIsDeleting(true);
@@ -196,7 +232,7 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
     if (!selectedProduct) return;
     const data = {
       host: appBridge.hostOrigin,
-      productHandle: handle.value || selectedProduct.handle,
+      productHandle: handle.value || selectedProduct.handle || "",
       discountCode: discountCode.value || undefined,
       variantId: variantId.value,
     };
@@ -214,7 +250,7 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
     isLoading: isLoadingDiscounts,
     isError: discountsError,
     /* useAppQuery makes a query to `/api/discounts`, which the backend authenticates before fetching the data from the Shopify GraphQL Admin API */
-  } = useAppQuery({ url: "/api/discounts" });
+  } = useAppQuery<DiscountsResponse>({ url: "/api/discounts" });
 
   /*
     This array is used in a select field in the form to manage discount options
@@ -238,10 +274,13 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
   /*
     These variables are used to display product images, and will be populated when image URLs can be retrieved from the Admin.
   */
-  const imageSrc = selectedProduct?.images?.edges?.[0]?.node?.url;
-  const originalImageSrc = selectedProduct?.images?.[0]?.originalSrc;
+  const images = selectedProduct?.images;
+  const imageSrc = Array.isArray(images)
+    ? images[0]?.originalSrc
+    : images?.edges?.[0]?.node?.url;
   const altText =
-    selectedProduct?.images?.[0]?.altText || selectedProduct?.title;
+    (Array.isArray(images) ? images[0]?.altText : undefined) ||
+    selectedProduct?.title;
 
   /* The form layout, created using Polaris and App Bridge components. */
   return (
@@ -259,7 +298,7 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
       )}
       <Layout>
         <Layout.Section>
-          <Form>
+          <Form onSubmit={submit}>
             <ContextualSaveBar
               saveAction={{
                 label: "Save",
@@ -311,16 +350,16 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
                   )}
                   {productId.value ? (
                     <LegacyStack alignment="center">
-                      {imageSrc || originalImageSrc ? (
+                      {imageSrc ? (
                         <Thumbnail
-                          source={imageSrc || originalImageSrc}
-                          alt={altText}
+                          source={imageSrc}
+                          alt={altText ?? ""}
                         />
                       ) : (
                         <Thumbnail source={ImageIcon} alt="" size="small" />
                       )}
                       <Text as="span" fontWeight="bold">
-                        {selectedProduct.title}
+                        {selectedProduct?.title}
                       </Text>
                     </LegacyStack>
                   ) : (
@@ -388,10 +427,10 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
         </Layout.Section>
         <Layout.Section variant="oneThird">
           <LegacyCard sectioned title="QR code">
-            {QRCode ? (
+            {QRCodeURL ? (
               <EmptyState imageContained={true} image={QRCodeURL} />
             ) : (
-              <EmptyState>
+              <EmptyState image="">
                 <p>Your QR code will appear here after you save.</p>
               </EmptyState>
             )}
@@ -432,7 +471,15 @@ export function QRCodeForm({ QRCode: InitialQRCode }) {
 }
 
 /* Builds a URL to the selected product */
-function productViewURL({ host, productHandle, discountCode }) {
+function productViewURL({
+  host,
+  productHandle,
+  discountCode,
+}: {
+  host: string;
+  productHandle: string;
+  discountCode?: string;
+}): string {
   const url = new URL(host);
   const productPath = `/products/${productHandle}`;
 
@@ -450,7 +497,17 @@ function productViewURL({ host, productHandle, discountCode }) {
 }
 
 /* Builds a URL to a checkout that contains the selected product */
-function productCheckoutURL({ host, variantId, quantity = 1, discountCode }) {
+function productCheckoutURL({
+  host,
+  variantId,
+  quantity = 1,
+  discountCode,
+}: {
+  host: string;
+  variantId: string;
+  quantity?: number;
+  discountCode?: string;
+}): string {
   const url = new URL(host);
   const id = variantId.replace(
     /gid:\/\/shopify\/ProductVariant\/([0-9]+)/,

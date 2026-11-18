@@ -14,6 +14,10 @@ if (
   );
 }
 
+const frontendPort = process.env.FRONTEND_PORT
+  ? Number(process.env.FRONTEND_PORT)
+  : undefined;
+
 const proxyOptions = {
   target: `http://127.0.0.1:${process.env.BACKEND_PORT}`,
   changeOrigin: false,
@@ -37,7 +41,7 @@ if (host === "localhost") {
   hmrConfig = {
     protocol: "wss",
     host: host,
-    port: process.env.FRONTEND_PORT,
+    port: frontendPort,
     clientPort: 443,
   };
 }
@@ -53,7 +57,7 @@ export default defineConfig({
   },
   server: {
     host: "localhost",
-    port: process.env.FRONTEND_PORT,
+    port: frontendPort,
     hmr: hmrConfig,
     proxy: {
       "^/(\\?.*)?$": proxyOptions,

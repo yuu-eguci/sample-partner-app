@@ -1,4 +1,9 @@
+import type { ComponentType } from "react";
 import { Routes as ReactRouterRoutes, Route } from "react-router-dom";
+
+/* import.meta.glob() で読み込んだ pages 以下のモジュールです。 */
+export type PageModule = { default?: ComponentType };
+type PageRoute = { path: string; component: ComponentType };
 
 /**
  * File-based routing.
@@ -14,13 +19,16 @@ import { Routes as ReactRouterRoutes, Route } from "react-router-dom";
  *
  * @return {Routes} `<Routes/>` from React Router, with a `<Route/>` for each file in `pages`
  */
-export default function Routes({ pages }) {
+export default function Routes({ pages }: { pages: Record<string, PageModule> }) {
   const routes = useRoutes(pages);
   const routeComponents = routes.map(({ path, component: Component }) => (
     <Route key={path} path={path} element={<Component />} />
   ));
 
-  const NotFound = routes.find(({ path }) => path === "/notFound").component;
+  const NotFound = routes.find(({ path }) => path === "/notFound")?.component;
+  if (!NotFound) {
+    throw new Error("pages/NotFound.tsx must export a default React component");
+  }
 
   return (
     <ReactRouterRoutes>
@@ -30,7 +38,7 @@ export default function Routes({ pages }) {
   );
 }
 
-function useRoutes(pages) {
+function useRoutes(pages: Record<string, PageModule>): PageRoute[] {
   const routes = Object.keys(pages)
     .map((key) => {
       let path = key
@@ -63,7 +71,7 @@ function useRoutes(pages) {
         component: pages[key].default,
       };
     })
-    .filter((route) => route.component);
+    .filter((route): route is PageRoute => Boolean(route.component));
 
   return routes;
 }
