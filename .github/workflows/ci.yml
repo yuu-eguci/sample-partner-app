@@ -1,4 +1,4 @@
-# PR と main への push のたびに、テスト・ビルドと Docker Compose での起動確認を行います。
+# PR と main への push のたびに、テスト・ビルドと Docker Compose での起動・ブラウザでの動作確認を行います。
 # 実際の Shopify には接続せず、モック Shopify (mock/shopify) を使います。
 name: ci
 
@@ -46,6 +46,7 @@ jobs:
           cache-dependency-path: web/frontend/package-lock.json
       - run: npm install -g npm@${{ env.NPM_VERSION }}
       - run: npm ci
+      - run: npm test
       - run: npm run build
         env:
           SHOPIFY_API_KEY: ci-api-key
@@ -58,6 +59,7 @@ jobs:
       - uses: actions/checkout@v7
       - run: docker compose up --build --detach --wait
       - run: docker compose run --rm smoke
+      - run: docker compose run --rm e2e
       - if: failure()
         run: docker compose logs
       - if: always()

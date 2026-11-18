@@ -3,5 +3,5 @@ FROM node:26-alpine
 RUN apk add --no-cache openssl
 WORKDIR /mock
 COPY entrypoint.sh server.mjs ./
-EXPOSE 443
+EXPOSE 443 8443
 ENTRYPOINT ["sh", "/mock/entrypoint.sh"]
