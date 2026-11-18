@@ -8,8 +8,7 @@
         https://shopify.dev/apps/getting-started/build-app-example/backend
 */
 
-import { Shopify } from "@shopify/shopify-api";
-
+import { shopify } from "../shopify.js";
 import { QRCodesDB } from "../qr-codes-db.js";
 import {
   getQrCodeOr404,
@@ -59,46 +58,48 @@ const DISCOUNTS_QUERY = `
   }
 `;
 
-export default function applyQrCodeApiEndpoints(app) {
-  app.get("/api/discounts", async (req, res) => {
-    const session = await Shopify.Utils.loadCurrentSession(
-      req,
-      res,
-      app.get("use-online-tokens")
-    );
-
-    if (!session) {
-      res.status(401).send("Could not find a Shopify session");
-      return;
+const PRODUCTS_COUNT_QUERY = `
+  query productsCount {
+    productsCount {
+      count
     }
+  }
+`;
 
-    const client = new Shopify.Clients.Graphql(
-      session.shop,
-      session.accessToken
-    );
+export default function applyQrCodeApiEndpoints(app) {
+  app.get("/api/products/count", async (_req, res) => {
+    const client = new shopify.api.clients.Graphql({
+      session: res.locals.shopify.session,
+    });
+    const response = await client.request(PRODUCTS_COUNT_QUERY);
+
+    res.status(200).send({ count: response.data.productsCount.count });
+  });
+
+  app.get("/api/discounts", async (_req, res) => {
+    const client = new shopify.api.clients.Graphql({
+      session: res.locals.shopify.session,
+    });
 
     /* Fetch all available discounts to list in the QR code form */
-    const discounts = await client.query({
-      data: {
-        query: DISCOUNTS_QUERY,
-        variables: {
-          first: 25,
-        },
+    const discounts = await client.request(DISCOUNTS_QUERY, {
+      variables: {
+        first: 25,
       },
     });
 
-    res.send(discounts.body.data);
+    res.send(discounts.data);
   });
 
   app.post("/api/qrcodes", async (req, res) => {
     try {
       const id = await QRCodesDB.create({
-        ...(await parseQrCodeBody(req)),
+        ...parseQrCodeBody(req),
 
         /* Get the shop from the authorization header to prevent users from spoofing the data */
-        shopDomain: await getShopUrlFromSession(req, res),
+        shopDomain: getShopUrlFromSession(res),
       });
-      const response = await formatQrCodeResponse(req, res, [
+      const response = await formatQrCodeResponse(res, [
         await QRCodesDB.read(id),
       ]);
       res.status(201).send(response[0]);
@@ -112,8 +113,8 @@ export default function applyQrCodeApiEndpoints(app) {
 
     if (qrcode) {
       try {
-        await QRCodesDB.update(req.params.id, await parseQrCodeBody(req));
-        const response = await formatQrCodeResponse(req, res, [
+        await QRCodesDB.update(req.params.id, parseQrCodeBody(req));
+        const response = await formatQrCodeResponse(res, [
           await QRCodesDB.read(req.params.id),
         ]);
         res.status(200).send(response[0]);
@@ -125,11 +126,9 @@ export default function applyQrCodeApiEndpoints(app) {
 
   app.get("/api/qrcodes", async (req, res) => {
     try {
-      const rawCodeData = await QRCodesDB.list(
-        await getShopUrlFromSession(req, res)
-      );
+      const rawCodeData = await QRCodesDB.list(getShopUrlFromSession(res));
 
-      const response = await formatQrCodeResponse(req, res, rawCodeData);
+      const response = await formatQrCodeResponse(res, rawCodeData);
       res.status(200).send(response);
     } catch (error) {
       console.error(error);
@@ -141,7 +140,7 @@ export default function applyQrCodeApiEndpoints(app) {
     const qrcode = await getQrCodeOr404(req, res);
 
     if (qrcode) {
-      const formattedQrCode = await formatQrCodeResponse(req, res, [qrcode]);
+      const formattedQrCode = await formatQrCodeResponse(res, [qrcode]);
       res.status(200).send(formattedQrCode[0]);
     }
   });

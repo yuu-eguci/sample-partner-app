@@ -4,12 +4,12 @@
         https://shopify.dev/apps/getting-started/build-app-example/backend
 */
 
-import sqlite3 from "sqlite3";
-import path from "path";
-import { Shopify } from "@shopify/shopify-api";
-
-const DEFAULT_DB_FILE = path.join(process.cwd(), "qr_codes_db.sqlite");
 const DEFAULT_PURCHASE_QUANTITY = 1;
+
+/* QR コードの画像・スキャン用 URL に使うアプリの公開 URL です。 */
+function appUrl() {
+  return process.env.HOST.replace(/\/$/, "");
+}
 
 export const QRCodesDB = {
   qrCodesTableName: "qr_codes",
@@ -126,7 +126,7 @@ export const QRCodesDB = {
 
   /* The destination URL for a QR code is generated at query time */
   generateQrcodeDestinationUrl: function (qrcode) {
-    return `${Shopify.Context.HOST_SCHEME}://${Shopify.Context.HOST_NAME}/qrcodes/${qrcode.id}/scan`;
+    return `${appUrl()}/qrcodes/${qrcode.id}/scan`;
   },
 
   /* The behavior when a QR code is scanned */
@@ -151,57 +151,32 @@ export const QRCodesDB = {
     }
   },
 
-  /* Private */
-
   /*
-    Used to check whether to create the database.
-    Also used to make sure the database and table are set up before the server starts.
+    Creates the QR code table on the database assigned to `db` if it hasn't been created.
+    The CRUD methods wait for `ready`, so they never run before the table exists.
   */
-
-  __hasQrCodesTable: async function () {
+  init: function () {
     const query = `
-      SELECT name FROM sqlite_schema
-      WHERE
-        type = 'table' AND
-        name = ?;
+      CREATE TABLE IF NOT EXISTS ${this.qrCodesTableName} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        shopDomain VARCHAR(511) NOT NULL,
+        title VARCHAR(511) NOT NULL,
+        productId VARCHAR(255) NOT NULL,
+        variantId VARCHAR(255) NOT NULL,
+        handle VARCHAR(255) NOT NULL,
+        discountId VARCHAR(255) NOT NULL,
+        discountCode VARCHAR(255) NOT NULL,
+        destination VARCHAR(255) NOT NULL,
+        scans INTEGER,
+        createdAt DATETIME NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime'))
+      )
     `;
-    const rows = await this.__query(query, [this.qrCodesTableName]);
-    return rows.length === 1;
+
+    this.ready = this.__query(query);
+    return this.ready;
   },
 
-  /* Initializes the connection with the app's sqlite3 database */
-  init: async function () {
-
-    /* Initializes the connection to the database */
-    this.db = this.db ?? new sqlite3.Database(DEFAULT_DB_FILE);
-
-    const hasQrCodesTable = await this.__hasQrCodesTable();
-
-    if (hasQrCodesTable) {
-      this.ready = Promise.resolve();
-
-      /* Create the QR code table if it hasn't been created */
-    } else {
-      const query = `
-        CREATE TABLE ${this.qrCodesTableName} (
-          id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-          shopDomain VARCHAR(511) NOT NULL,
-          title VARCHAR(511) NOT NULL,
-          productId VARCHAR(255) NOT NULL,
-          variantId VARCHAR(255) NOT NULL,
-          handle VARCHAR(255) NOT NULL,
-          discountId VARCHAR(255) NOT NULL,
-          discountCode VARCHAR(255) NOT NULL,
-          destination VARCHAR(255) NOT NULL,
-          scans INTEGER,
-          createdAt DATETIME NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime'))
-        )
-      `;
-
-      /* Tell the various CRUD methods that they can execute */
-      this.ready = this.__query(query);
-    }
-  },
+  /* Private */
 
   /* Perform a query on the database. Used by the various CRUD methods. */
   __query: function (sql, params = []) {
@@ -227,7 +202,7 @@ export const QRCodesDB = {
   },
 
   __generateQrcodeImageUrl: function (qrcode) {
-    return `${Shopify.Context.HOST_SCHEME}://${Shopify.Context.HOST_NAME}/qrcodes/${qrcode.id}/image`;
+    return `${appUrl()}/qrcodes/${qrcode.id}/image`;
   },
 
   __increaseScanCount: async function (qrcode) {

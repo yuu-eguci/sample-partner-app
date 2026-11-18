@@ -3,8 +3,7 @@
         https://shopify.dev/apps/getting-started/build-app-example/backend
 */
 
-import { Shopify } from "@shopify/shopify-api";
-
+import { shopify } from "../shopify.js";
 import { QRCodesDB } from "../qr-codes-db.js";
 
 /*
@@ -44,7 +43,7 @@ export async function getQrCodeOr404(req, res, checkDomain = true) {
     if (
       response === undefined ||
       (checkDomain &&
-        (await getShopUrlFromSession(req, res)) !== response.shopDomain)
+        getShopUrlFromSession(res) !== response.shopDomain)
     ) {
       res.status(404).send();
     } else {
@@ -57,9 +56,9 @@ export async function getQrCodeOr404(req, res, checkDomain = true) {
   return undefined;
 }
 
-export async function getShopUrlFromSession(req, res) {
-  const session = await Shopify.Utils.loadCurrentSession(req, res, false);
-  return `https://${session.shop}`;
+/* validateAuthenticatedSession() が res.locals.shopify.session に設定したセッションのショップです。 */
+export function getShopUrlFromSession(res) {
+  return `https://${res.locals.shopify.session.shop}`;
 }
 
 /*
@@ -72,7 +71,7 @@ discountId: string
 discountCode: string
 destination: string
 */
-export async function parseQrCodeBody(req, res) {
+export function parseQrCodeBody(req) {
   return {
     title: req.body.title,
     productId: req.body.productId,
@@ -87,7 +86,7 @@ export async function parseQrCodeBody(req, res) {
 /*
   Replaces the productId with product data queried from the Shopify GraphQL Admin API
 */
-export async function formatQrCodeResponse(req, res, rawCodeData) {
+export async function formatQrCodeResponse(res, rawCodeData) {
   const ids = [];
 
   /* Get every product, variant and discountID that was queried from the database */
@@ -101,24 +100,21 @@ export async function formatQrCodeResponse(req, res, rawCodeData) {
   });
 
   /* Instantiate a new GraphQL client to query the Shopify GraphQL Admin API */
-  const session = await Shopify.Utils.loadCurrentSession(req, res, false);
-  const client = new Shopify.Clients.Graphql(session.shop, session.accessToken);
+  const client = new shopify.api.clients.Graphql({
+    session: res.locals.shopify.session,
+  });
 
   /* Query the Shopify GraphQL Admin API */
-  const adminData = await client.query({
-    data: {
-      query: QR_CODE_ADMIN_QUERY,
-
-      /* The IDs that are pulled from the app's database are used to query product, variant and discount information */
-      variables: { ids },
-    },
+  const adminData = await client.request(QR_CODE_ADMIN_QUERY, {
+    /* The IDs that are pulled from the app's database are used to query product, variant and discount information */
+    variables: { ids },
   });
 
   /*
     Replace the product, discount and variant IDs with the data fetched using the Shopify GraphQL Admin API.
   */
   const formattedData = rawCodeData.map((qrCode) => {
-    const product = adminData.body.data.nodes.find(
+    const product = adminData.data.nodes.find(
       (node) => qrCode.productId === node?.id
     ) || {
       title: "Deleted product",
@@ -126,7 +122,7 @@ export async function formatQrCodeResponse(req, res, rawCodeData) {
 
     const discountDeleted =
       qrCode.discountId &&
-      !adminData.body.data.nodes.find((node) => qrCode.discountId === node?.id);
+      !adminData.data.nodes.find((node) => qrCode.discountId === node?.id);
 
     /*
       A user might create a QR code with a discount code and then later delete that discount code.
