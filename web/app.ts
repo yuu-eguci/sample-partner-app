@@ -4,10 +4,10 @@ import express from "express";
 import compression from "compression";
 import serveStatic from "serve-static";
 
-import { shopify } from "./shopify.js";
-import { GDPRWebhookHandlers } from "./gdpr.js";
-import applyQrCodeApiEndpoints from "./middleware/qr-code-api.js";
-import applyQrCodePublicEndpoints from "./middleware/qr-code-public.js";
+import { shopify } from "./shopify.ts";
+import { GDPRWebhookHandlers } from "./gdpr.ts";
+import applyQrCodeApiEndpoints from "./middleware/qr-code-api.ts";
+import applyQrCodePublicEndpoints from "./middleware/qr-code-public.ts";
 
 const DEV_INDEX_PATH = join(process.cwd(), "frontend");
 const PROD_INDEX_PATH = join(process.cwd(), "frontend", "dist");

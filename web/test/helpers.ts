@@ -1,11 +1,16 @@
 import { createHmac } from "node:crypto";
 import { Session } from "@shopify/shopify-api";
 
+import type { shopify as shopifyApp } from "../shopify.ts";
+
+type ShopifyApp = typeof shopifyApp;
+type GraphqlResolver = (query: string, variables: Record<string, unknown>) => unknown;
+
 export const SHOP = "test-shop.myshopify.com";
 export const ACCESS_TOKEN = "test-access-token";
 
 /* テスト用のオフラインセッションを保存します (インストール済みの状態にします)。 */
-export async function installShop(shopify, shop = SHOP) {
+export async function installShop(shopify: ShopifyApp, shop = SHOP): Promise<Session> {
   const session = new Session({
     id: shopify.api.session.getOfflineId(shop),
     shop,
@@ -18,12 +23,16 @@ export async function installShop(shopify, shop = SHOP) {
   return session;
 }
 
-function base64url(value) {
+function base64url(value: string): string {
   return Buffer.from(value).toString("base64url");
 }
 
 /* App Bridge が発行するものと同じ形式のセッショントークン (HS256 の JWT) を作ります。 */
-export function sessionToken(shop = SHOP) {
+function apiSecret(): string {
+  return process.env.SHOPIFY_API_SECRET ?? "";
+}
+
+export function sessionToken(shop = SHOP): string {
   const now = Math.floor(Date.now() / 1000);
   const header = base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const payload = base64url(
@@ -39,21 +48,21 @@ export function sessionToken(shop = SHOP) {
       sid: "test-sid",
     })
   );
-  const signature = createHmac("sha256", process.env.SHOPIFY_API_SECRET)
+  const signature = createHmac("sha256", apiSecret())
     .update(`${header}.${payload}`)
     .digest("base64url");
   return `${header}.${payload}.${signature}`;
 }
 
 /* Admin GraphQL API への fetch を、クエリに応じた固定の応答で置き換えます。 */
-export function mockAdminGraphql(resolve) {
-  const requests = [];
+export function mockAdminGraphql(resolve: GraphqlResolver) {
+  const requests: { url: string; body: { query: string; variables?: Record<string, unknown> } }[] = [];
   globalThis.__shopifyFetchHandler = async (input, init) => {
     const url = String(input);
     if (!/\/admin\/api\/[^/]+\/graphql\.json$/.test(url)) {
       throw new Error(`Unexpected fetch in test: ${url}`);
     }
-    const body = JSON.parse(init.body);
+    const body = JSON.parse(String(init?.body));
     requests.push({ url, body });
     const data = resolve(body.query, body.variables ?? {});
     return new Response(JSON.stringify({ data }), {
@@ -64,8 +73,8 @@ export function mockAdminGraphql(resolve) {
   return requests;
 }
 
-export function webhookHmac(body) {
-  return createHmac("sha256", process.env.SHOPIFY_API_SECRET)
+export function webhookHmac(body: string): string {
+  return createHmac("sha256", apiSecret())
     .update(body, "utf8")
     .digest("base64");
 }

@@ -4,7 +4,7 @@ import { shopifyApp } from "@shopify/shopify-app-express";
 import { SQLiteSessionStorage } from "@shopify/shopify-app-session-storage-sqlite";
 import sqlite3 from "sqlite3";
 
-import { QRCodesDB } from "./qr-codes-db.js";
+import { QRCodesDB } from "./qr-codes-db.ts";
 
 /*
   セッションと QR コードは同じ SQLite ファイルに保存します。

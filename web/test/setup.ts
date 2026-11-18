@@ -23,8 +23,13 @@ writeFileSync(
 );
 process.chdir(workDir);
 
-const unexpectedFetch = async (input) => {
-  throw new Error(`Unexpected fetch in test: ${input}`);
+declare global {
+  // テストごとに差し替える、Shopify への fetch の応答です。
+  var __shopifyFetchHandler: typeof fetch;
+}
+
+const unexpectedFetch: typeof fetch = async (input) => {
+  throw new Error(`Unexpected fetch in test: ${String(input)}`);
 };
 
 globalThis.__shopifyFetchHandler = unexpectedFetch;

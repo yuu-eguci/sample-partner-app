@@ -1,4 +1,5 @@
 import { DeliveryMethod } from "@shopify/shopify-api";
+import type { WebhookHandlersParam } from "@shopify/shopify-app-express";
 
 /*
   必須の GDPR webhook のハンドラです。
@@ -7,7 +8,7 @@ import { DeliveryMethod } from "@shopify/shopify-api";
 
   https://shopify.dev/apps/webhooks/configuration/mandatory-webhooks
 */
-export const GDPRWebhookHandlers = {
+export const GDPRWebhookHandlers: WebhookHandlersParam = {
   /**
    * Customers can request their data from a store owner. When this happens,
    * Shopify invokes this webhook.

@@ -4,17 +4,39 @@
         https://shopify.dev/apps/getting-started/build-app-example/backend
 */
 
+import type sqlite3 from "sqlite3";
+
 const DEFAULT_PURCHASE_QUANTITY = 1;
 
+/* QR コードの作成・更新時に受け取る項目です。 */
+export interface QrCodeFields {
+  title: string;
+  productId: string;
+  variantId: string;
+  handle: string;
+  discountId: string;
+  discountCode: string;
+  destination: string;
+}
+
+/* qr_codes テーブルの 1 行に、画像の URL を加えたものです。 */
+export interface QrCodeRecord extends QrCodeFields {
+  id: number;
+  shopDomain: string;
+  scans: number;
+  createdAt: string;
+  imageUrl?: string;
+}
+
 /* QR コードの画像・スキャン用 URL に使うアプリの公開 URL です。 */
-function appUrl() {
-  return process.env.HOST.replace(/\/$/, "");
+function appUrl(): string {
+  return (process.env.HOST ?? "").replace(/\/$/, "");
 }
 
 export const QRCodesDB = {
   qrCodesTableName: "qr_codes",
-  db: null,
-  ready: null,
+  db: null as sqlite3.Database | null,
+  ready: null as Promise<unknown> | null,
 
   create: async function ({
     shopDomain,
@@ -25,7 +47,7 @@ export const QRCodesDB = {
     discountId,
     discountCode,
     destination,
-  }) {
+  }: QrCodeFields & { shopDomain: string }): Promise<number> {
     await this.ready;
 
     const query = `
@@ -35,7 +57,7 @@ export const QRCodesDB = {
       RETURNING id;
     `;
 
-    const rawResults = await this.__query(query, [
+    const rawResults = await this.__query<{ id: number }>(query, [
       shopDomain,
       title,
       productId,
@@ -50,7 +72,7 @@ export const QRCodesDB = {
   },
 
   update: async function (
-    id,
+    id: number | string,
     {
       title,
       productId,
@@ -59,8 +81,8 @@ export const QRCodesDB = {
       discountId,
       discountCode,
       destination,
-    }
-  ) {
+    }: QrCodeFields
+  ): Promise<boolean> {
     await this.ready;
 
     const query = `
@@ -90,31 +112,33 @@ export const QRCodesDB = {
     return true;
   },
 
-  list: async function (shopDomain) {
+  list: async function (shopDomain: string): Promise<QrCodeRecord[]> {
     await this.ready;
     const query = `
       SELECT * FROM ${this.qrCodesTableName}
       WHERE shopDomain = ?;
     `;
 
-    const results = await this.__query(query, [shopDomain]);
+    const results = await this.__query<QrCodeRecord>(query, [shopDomain]);
 
     return results.map((qrcode) => this.__addImageUrl(qrcode));
   },
 
-  read: async function (id) {
+  read: async function (
+    id: number | string
+  ): Promise<QrCodeRecord | undefined> {
     await this.ready;
     const query = `
       SELECT * FROM ${this.qrCodesTableName}
       WHERE id = ?;
     `;
-    const rows = await this.__query(query, [id]);
+    const rows = await this.__query<QrCodeRecord>(query, [id]);
     if (!Array.isArray(rows) || rows?.length !== 1) return undefined;
 
     return this.__addImageUrl(rows[0]);
   },
 
-  delete: async function (id) {
+  delete: async function (id: number | string): Promise<boolean> {
     await this.ready;
     const query = `
       DELETE FROM ${this.qrCodesTableName}
@@ -125,12 +149,12 @@ export const QRCodesDB = {
   },
 
   /* The destination URL for a QR code is generated at query time */
-  generateQrcodeDestinationUrl: function (qrcode) {
+  generateQrcodeDestinationUrl: function (qrcode: QrCodeRecord): string {
     return `${appUrl()}/qrcodes/${qrcode.id}/scan`;
   },
 
   /* The behavior when a QR code is scanned */
-  handleCodeScan: async function (qrcode) {
+  handleCodeScan: async function (qrcode: QrCodeRecord): Promise<string> {
 
     /* Log the scan in the database */
     await this.__increaseScanCount(qrcode);
@@ -147,7 +171,7 @@ export const QRCodesDB = {
         return this.__goToProductCheckout(url, qrcode);
 
       default:
-        throw `Unrecognized destination "${qrcode.destination}"`;
+        throw new Error(`Unrecognized destination "${qrcode.destination}"`);
     }
   },
 
@@ -155,7 +179,7 @@ export const QRCodesDB = {
     Creates the QR code table on the database assigned to `db` if it hasn't been created.
     The CRUD methods wait for `ready`, so they never run before the table exists.
   */
-  init: function () {
+  init: function (): Promise<unknown> {
     const query = `
       CREATE TABLE IF NOT EXISTS ${this.qrCodesTableName} (
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -179,9 +203,16 @@ export const QRCodesDB = {
   /* Private */
 
   /* Perform a query on the database. Used by the various CRUD methods. */
-  __query: function (sql, params = []) {
+  __query: function <Row = unknown>(
+    sql: string,
+    params: unknown[] = []
+  ): Promise<Row[]> {
+    const db = this.db;
+    if (!db) {
+      return Promise.reject(new Error("QRCodesDB.db is not set"));
+    }
     return new Promise((resolve, reject) => {
-      this.db.all(sql, params, (err, result) => {
+      db.all<Row>(sql, params, (err, result) => {
         if (err) {
           reject(err);
           return;
@@ -191,7 +222,7 @@ export const QRCodesDB = {
     });
   },
 
-  __addImageUrl: function (qrcode) {
+  __addImageUrl: function (qrcode: QrCodeRecord): QrCodeRecord {
     try {
       qrcode.imageUrl = this.__generateQrcodeImageUrl(qrcode);
     } catch (err) {
@@ -201,11 +232,11 @@ export const QRCodesDB = {
     return qrcode;
   },
 
-  __generateQrcodeImageUrl: function (qrcode) {
+  __generateQrcodeImageUrl: function (qrcode: QrCodeRecord): string {
     return `${appUrl()}/qrcodes/${qrcode.id}/image`;
   },
 
-  __increaseScanCount: async function (qrcode) {
+  __increaseScanCount: async function (qrcode: QrCodeRecord): Promise<void> {
     const query = `
       UPDATE ${this.qrCodesTableName}
       SET scans = scans + 1
@@ -214,7 +245,7 @@ export const QRCodesDB = {
     await this.__query(query, [qrcode.id]);
   },
 
-  __goToProductView: function (url, qrcode) {
+  __goToProductView: function (url: URL, qrcode: QrCodeRecord): string {
     return productViewURL({
       discountCode: qrcode.discountCode,
       host: url.toString(),
@@ -222,7 +253,7 @@ export const QRCodesDB = {
     });
   },
 
-  __goToProductCheckout: function (url, qrcode) {
+  __goToProductCheckout: function (url: URL, qrcode: QrCodeRecord): string {
     return productCheckoutURL({
       discountCode: qrcode.discountCode,
       host: url.toString(),
@@ -233,7 +264,15 @@ export const QRCodesDB = {
 };
 
 /* Generate the URL to a product page */
-function productViewURL({ host, productHandle, discountCode }) {
+function productViewURL({
+  host,
+  productHandle,
+  discountCode,
+}: {
+  host: string;
+  productHandle: string;
+  discountCode: string;
+}): string {
   const url = new URL(host);
   const productPath = `/products/${productHandle}`;
 
@@ -249,7 +288,17 @@ function productViewURL({ host, productHandle, discountCode }) {
 }
 
 /* Generate the URL to checkout with the product in the cart */
-function productCheckoutURL({ host, variantId, quantity = 1, discountCode }) {
+function productCheckoutURL({
+  host,
+  variantId,
+  quantity = 1,
+  discountCode,
+}: {
+  host: string;
+  variantId: string;
+  quantity?: number;
+  discountCode: string;
+}): string {
   const url = new URL(host);
   const id = variantId.replace(
     /gid:\/\/shopify\/ProductVariant\/([0-9]+)/,
