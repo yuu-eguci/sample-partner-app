@@ -30,6 +30,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm install -g npm@${{ env.NPM_VERSION }}
       - run: npm ci
+      - run: npm run typecheck
       - run: npm test
 
   frontend:
@@ -46,6 +47,7 @@ jobs:
           cache-dependency-path: web/frontend/package-lock.json
       - run: npm install -g npm@${{ env.NPM_VERSION }}
       - run: npm ci
+      - run: npm run typecheck
       - run: npm test
       - run: npm run build
         env:

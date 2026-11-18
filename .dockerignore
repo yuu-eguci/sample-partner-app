@@ -9,6 +9,6 @@ web/frontend/dist
 .aws
 mock
 web/test
-web/vitest.config.js
+web/vitest.config.ts
 web/frontend/test
-web/frontend/vitest.config.js
+web/frontend/vitest.config.ts
