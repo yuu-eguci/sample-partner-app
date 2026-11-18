@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   QueryClient,
   QueryClientProvider,
@@ -10,7 +10,7 @@ import {
  * Sets up the QueryClientProvider from TanStack Query.
  * @desc See: https://tanstack.com/query/v5/docs/framework/react/reference/QueryClientProvider
  */
-export function QueryProvider({ children }) {
+export function QueryProvider({ children }: { children: ReactNode }) {
   // Keep the same client (and its cache) across re-renders.
   const [client] = useState(
     () =>

@@ -4,12 +4,13 @@
   NOTE: Getting started の通りにコピペしたもの。
         https://shopify.dev/apps/getting-started/build-app-example/connect
 */
+import type { Express } from "express";
 import QRCode from "qrcode";
 
-import { QRCodesDB } from "../qr-codes-db.js";
-import { getQrCodeOr404 } from "../helpers/qr-codes.js";
+import { QRCodesDB } from "../qr-codes-db.ts";
+import { getQrCodeOr404 } from "../helpers/qr-codes.ts";
 
-export default function applyQrCodePublicEndpoints(app) {
+export default function applyQrCodePublicEndpoints(app: Express): void {
   /*
     The URL for a QR code image.
     The image is generated dynamically so that merhcanges can change the configuration for a QR code.

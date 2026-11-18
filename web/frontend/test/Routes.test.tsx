@@ -15,7 +15,7 @@ const pages = {
   "./pages/qrcodes/[id].jsx": { default: () => <p>edit QR code page</p> },
 };
 
-function renderAt(path) {
+function renderAt(path: string) {
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes pages={pages} />

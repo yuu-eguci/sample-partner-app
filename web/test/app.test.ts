@@ -1,22 +1,23 @@
+import type { Express } from "express";
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { createApp } from "../app.js";
-import { shopify } from "../shopify.js";
+import { createApp } from "../app.ts";
+import { shopify } from "../shopify.ts";
 import {
   SHOP,
   installShop,
   mockAdminGraphql,
   sessionToken,
   webhookHmac,
-} from "./helpers.js";
+} from "./helpers.ts";
 
 const PRODUCT_ID = "gid://shopify/Product/1";
 const VARIANT_ID = "gid://shopify/ProductVariant/11";
 const DISCOUNT_ID = "gid://shopify/DiscountCodeNode/21";
 
 /* Admin GraphQL API のモック応答です。 */
-function adminApi(query) {
+function adminApi(query: string, _variables: Record<string, unknown> = {}): unknown {
   if (query.includes("shopifyAppShopName")) {
     return { shop: { name: "Test shop" } };
   }
@@ -59,12 +60,12 @@ const qrCodeBody = {
   destination: "product",
 };
 
-let app;
+let app: Express;
 beforeAll(async () => {
   ({ app } = await createApp({ isProd: false }));
 });
 
-function authorized(req) {
+function authorized(req: request.Test): request.Test {
   return req.set("Authorization", `Bearer ${sessionToken()}`);
 }
 
@@ -169,7 +170,7 @@ describe("authenticated API", () => {
       imageUrl: `https://app.example.test/qrcodes/${created.body.id}/image`,
     });
     expect(created.body).not.toHaveProperty("productId");
-    expect(requests.at(-1).body.variables.ids).toEqual([
+    expect(requests.at(-1)?.body.variables?.ids).toEqual([
       PRODUCT_ID,
       VARIANT_ID,
       DISCOUNT_ID,
@@ -194,7 +195,7 @@ describe("authenticated API", () => {
 
     const list = await authorized(request(app).get("/api/qrcodes"));
     expect(list.status).toBe(200);
-    expect(list.body.map((qrCode) => qrCode.id)).toContain(id);
+    expect(list.body.map((qrCode: { id: number }) => qrCode.id)).toContain(id);
 
     const deleted = await authorized(request(app).delete(`/api/qrcodes/${id}`));
     expect(deleted.status).toBe(200);
@@ -238,7 +239,7 @@ describe("authenticated API", () => {
 });
 
 describe("public QR code endpoints", () => {
-  let id;
+  let id: number;
   beforeAll(async () => {
     await installShop(shopify);
     mockAdminGraphql(adminApi);
@@ -287,7 +288,7 @@ describe("public QR code endpoints", () => {
 });
 
 describe("POST /api/webhooks", () => {
-  function sendWebhook(topic, body, hmac = webhookHmac(body)) {
+  function sendWebhook(topic: string, body: string, hmac = webhookHmac(body)) {
     return request(app)
       .post("/api/webhooks")
       .set("Content-Type", "application/json")

@@ -3,10 +3,11 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "debug": "node --inspect-brk index.js",
-    "dev": "cross-env NODE_ENV=development nodemon index.js --ignore ./frontend",
-    "serve": "cross-env NODE_ENV=production node index.js",
-    "test": "vitest run"
+    "debug": "node --inspect-brk index.ts",
+    "dev": "cross-env NODE_ENV=development nodemon --exec node index.ts --ignore ./frontend",
+    "serve": "cross-env NODE_ENV=production node index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc"
   },
   "type": "module",
   "engines": {
@@ -36,9 +37,16 @@
     "sqlite3": "^6.0.1"
   },
   "devDependencies": {
+    "@types/compression": "^1.8.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.6",
+    "@types/qrcode": "^1.5.6",
+    "@types/serve-static": "^2.2.0",
+    "@types/supertest": "^7.2.1",
     "nodemon": "^3.1.14",
     "prettier": "^3.10.1",
     "supertest": "^7.3.2",
+    "typescript": "^7.0.2",
     "vitest": "^5.1.1"
   },
   "allowScripts": {

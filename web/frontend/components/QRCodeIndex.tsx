@@ -20,6 +20,10 @@ import { useMedia } from "@shopify/react-hooks";
 /* dayjs is used to capture and format the date a QR code was created or modified */
 import dayjs from "dayjs";
 
+import type { QRCode } from "../types";
+
+type Navigate = ReturnType<typeof useNavigate>;
+
 /* Markup for small screen sizes (mobile) */
 function SmallScreenCard({
   id,
@@ -29,7 +33,7 @@ function SmallScreenCard({
   scans,
   createdAt,
   navigate,
-}) {
+}: QRCode & { navigate: Navigate }) {
   return (
     <UnstyledLink onClick={() => navigate(`/qrcodes/${id}`)}>
       <div
@@ -72,7 +76,13 @@ function SmallScreenCard({
   );
 }
 
-export function QRCodeIndex({ QRCodes, loading }) {
+export function QRCodeIndex({
+  QRCodes,
+  loading,
+}: {
+  QRCodes: QRCode[];
+  loading: boolean;
+}) {
   const navigate = useNavigate();
 
   /* Check if screen is small */
@@ -95,7 +105,7 @@ export function QRCodeIndex({ QRCodes, loading }) {
       /* The form layout, created using Polaris components. Includes the QR code data set above. */
       return (
         <IndexTable.Row
-          id={id}
+          id={String(id)}
           key={id}
           position={index}
           onClick={() => {
@@ -162,6 +172,6 @@ export function QRCodeIndex({ QRCodes, loading }) {
 }
 
 /* A function to truncate long strings */
-function truncate(str, n) {
+function truncate(str: string, n: number): string {
   return str.length > n ? str.substr(0, n - 1) + "…" : str;
 }

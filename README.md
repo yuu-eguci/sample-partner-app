@@ -9,11 +9,11 @@ https://shopify.dev/apps/getting-started
 
 | パス | 内容 |
 | --- | --- |
-| `web/` | Express によるバックエンド (`npm run serve` で起動します)。Shopify との認証・セッション管理は `@shopify/shopify-app-express` を使い、QR コードとセッションを SQLite (`web/database.sqlite`) に保存します。 |
-| `web/frontend/` | React 18 + Vite + Polaris + App Bridge (v3) によるフロントエンド (埋め込みアプリの画面)。`npm run build` で `web/frontend/dist/` に出力し、本番ではバックエンドが配信します。 |
+| `web/` | Express + TypeScript によるバックエンド (`npm run serve` で起動します)。Node.js 26 の型ストリップ機能で `.ts` をビルドせずに直接実行します。Shopify との認証・セッション管理は `@shopify/shopify-app-express` を使い、QR コードとセッションを SQLite (`web/database.sqlite`) に保存します。 |
+| `web/frontend/` | React 18 + TypeScript + Vite + Polaris + App Bridge (v3) によるフロントエンド (埋め込みアプリの画面)。`npm run build` で `web/frontend/dist/` に出力し、本番ではバックエンドが配信します。 |
 | `extensions/` | テーマアプリ拡張機能。 |
 | `mock/shopify/` | 動作確認用のモック Shopify (OAuth・Admin API・管理画面・アプリへの HTTPS プロキシ)。本番 image には含めません。 |
-| `mock/smoke-test.mjs` / `mock/e2e/` | モック Shopify を相手にした HTTP の smoke テストと、Playwright (Chromium) によるブラウザの e2e テスト。 |
+| `mock/smoke-test.mjs` / `mock/e2e/` | モック Shopify を相手にした HTTP の smoke テストと、Playwright (Chromium) によるブラウザの e2e テスト。アプリとは別のコンテナで動く検証用スクリプトのため、JavaScript のままです。 |
 | `Dockerfile` | 本番用 image。`web/` の依存をインストールし、フロントエンドをビルドしてバックエンドを起動します。 |
 | `compose.yaml` / `compose.mock.yaml` | Docker Compose の定義。`compose.mock.yaml` はモック Shopify で動作確認するための追加定義です。 |
 
@@ -21,6 +21,7 @@ https://shopify.dev/apps/getting-started
 
 - Node.js 26 (Active LTS)
 - npm 12
+- TypeScript 7 (型チェックのみ。`npm run typecheck` で実行します)
 
 ホストに Node.js がなくても、以下の Docker の手順だけで build・起動・テストができます。
 
@@ -100,9 +101,9 @@ docker compose -f compose.yaml -f compose.mock.yaml down -v
 
 ```bash
 docker run --rm -v "$PWD/web:/app" -w /app node:26-alpine \
-  sh -c 'npm install -g npm@12 && npm ci && npm test'
+  sh -c 'npm install -g npm@12 && npm ci && npm run typecheck && npm test'
 docker run --rm -v "$PWD/web/frontend:/app" -w /app node:26-alpine \
-  sh -c 'npm install -g npm@12 && npm ci && npm test && SHOPIFY_API_KEY=dummy npm run build'
+  sh -c 'npm install -g npm@12 && npm ci && npm run typecheck && npm test && SHOPIFY_API_KEY=dummy npm run build'
 ```
 
 `Dockerfile.dev` は、`web/` をボリュームでマウントして起動時にインストール・ビルドする開発用 image です。
@@ -112,7 +113,7 @@ docker build -f Dockerfile.dev -t sample-partner-app-dev .
 docker run --rm --env-file .env -e PORT=8081 -p 8081:8081 -v "$PWD/web:/app" sample-partner-app-dev
 ```
 
-CI (`.github/workflows/ci.yml`) では、PR と main への push のたびに上記のテスト・ビルドと、モック Shopify を使った Docker Compose の起動確認 (`smoke`)・ブラウザでの動作確認 (`e2e`) を行います。
+CI (`.github/workflows/ci.yml`) では、PR と main への push のたびに上記の型チェック・テスト・ビルドと、モック Shopify を使った Docker Compose の起動確認 (`smoke`)・ブラウザでの動作確認 (`e2e`) を行います。
 
 ## デプロイ
 

@@ -1,7 +1,7 @@
 {
   "name": "sample-partner-app",
   "version": "1.0.0",
-  "main": "web/index.js",
+  "main": "web/index.ts",
   "license": "UNLICENSED",
   "scripts": {
     "shopify": "shopify",
