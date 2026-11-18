@@ -117,4 +117,12 @@ CI (`.github/workflows/ci.yml`) では、PR と main への push のたびに上
 
 ## デプロイ
 
-`.github/workflows/` のデプロイ用 workflow (Amazon ECS・Elastic Beanstalk・拡張機能) は、いずれも手動実行 (`workflow_dispatch`) のみです。
+`.github/workflows/` のデプロイ用 workflow は、いずれも手動実行 (`workflow_dispatch`) のみです。
+
+| workflow | 内容 |
+| --- | --- |
+| `cd-elastic-beanstalk.yml` | Node.js 26 で `web/` の依存をインストールし、フロントエンドをビルドして `web/` を zip にし、Elastic Beanstalk にデプロイします。Elastic Beanstalk は arm64 のため、`npm_config_arch=arm64` で sqlite3 の linux arm64 用ビルド済みバイナリを取得します。Elastic Beanstalk の環境は Node.js 26 のプラットフォームである必要があります。 |
+| `aws.yml` | `Dockerfile` の image を Amazon ECR に push し、Amazon ECS にデプロイします。 |
+| `deploy-extensions.yml` | ルートの Shopify CLI で拡張機能をデプロイします。 |
+
+ルートの `package.json` の Shopify CLI (`@shopify/cli` 3.20.1) は、`client_id` を含まない旧形式の `shopify.app.toml` を前提としています。現行の Shopify CLI はアプリと紐づけた形式 (`client_id`・`application_url`・`[auth]`・`[webhooks]` など) の設定を必須としており、移行には Partner Dashboard のアプリとの紐づけ (`shopify app config link`) が必要なため、旧バージョンのままにしています。
