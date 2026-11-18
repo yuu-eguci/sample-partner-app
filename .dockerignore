@@ -1,3 +1,12 @@
-web/node_modules
-web/frontend/node_modules
+# image に含めないもの (依存・ビルド成果物・秘密情報・ローカルデータ・テスト)
+**/node_modules
 web/frontend/dist
+**/.env
+**/.env.*
+**/*.sqlite
+.git
+.github
+.aws
+mock
+web/test
+web/vitest.config.js
