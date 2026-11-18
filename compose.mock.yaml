@@ -1,12 +1,16 @@
 # モック Shopify で動作確認するための追加定義です (実際の Shopify には接続しません)。
 #   docker compose -f compose.yaml -f compose.mock.yaml up --build -d
 #   docker compose -f compose.yaml -f compose.mock.yaml run --rm smoke
+#   docker compose -f compose.yaml -f compose.mock.yaml run --rm e2e
 #   docker compose -f compose.yaml -f compose.mock.yaml down -v
 #
 # モック Shopify は外部に接続できない内部ネットワーク (mock) にだけ参加し、
 # そのネットワーク内で mock-shop.myshopify.com として名前解決されます。
+# また、アプリの HTTPS の入口 https://secure-partner-app:8443 (アプリの HOST) として、
+# http://app:8081 へのリバースプロキシを兼ねます。
 x-mock-values: &mock-values
   MOCK_SHOP: mock-shop.myshopify.com
+  MOCK_APP_HOST: secure-partner-app
   MOCK_API_KEY: mock-api-key
   MOCK_API_SECRET: mock-api-secret
   MOCK_SCOPES: write_products,read_discounts
@@ -20,7 +24,7 @@ services:
       SHOPIFY_API_KEY: mock-api-key
       SHOPIFY_API_SECRET: mock-api-secret
       SCOPES: write_products,read_discounts
-      HOST: http://app:8081
+      HOST: https://secure-partner-app:8443
       NODE_EXTRA_CA_CERTS: /certs/mock-shopify.pem
     volumes:
       - mock-certs:/certs:ro
@@ -33,13 +37,16 @@ services:
 
   mock-shopify:
     build: mock/shopify
-    environment: *mock-values
+    environment:
+      <<: *mock-values
+      MOCK_APP_UPSTREAM: http://app:8081
     volumes:
       - mock-certs:/certs
     networks:
       mock:
         aliases:
           - mock-shop.myshopify.com
+          - secure-partner-app
     healthcheck:
       test:
         - CMD
@@ -56,10 +63,25 @@ services:
     command: ["node", "/mock/smoke-test.mjs"]
     environment:
       <<: *mock-values
-      APP_URL: http://app:8081
+      APP_URL: https://secure-partner-app:8443
       NODE_EXTRA_CA_CERTS: /certs/mock-shopify.pem
     volumes:
       - ./mock/smoke-test.mjs:/mock/smoke-test.mjs:ro
+      - mock-certs:/certs:ro
+    networks:
+      - mock
+    depends_on:
+      app:
+        condition: service_healthy
+
+  e2e:
+    build: mock/e2e
+    profiles: ["test"]
+    environment:
+      <<: *mock-values
+      APP_URL: https://secure-partner-app:8443
+      NODE_EXTRA_CA_CERTS: /certs/mock-shopify.pem
+    volumes:
       - mock-certs:/certs:ro
     networks:
       - mock
