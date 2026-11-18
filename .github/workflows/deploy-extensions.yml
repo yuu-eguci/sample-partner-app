@@ -9,7 +9,7 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       # ドキュメント通りにやっていたらこの yml は動作しない。
       #     https://shopify.dev/apps/tools/cli/ci-cd
@@ -18,7 +18,7 @@ jobs:
         with:
           ruby-version: 2.7.5
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v7
         with:
           node-version: 18
           cache: 'yarn'

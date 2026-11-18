@@ -5,8 +5,9 @@ on:
   workflow_dispatch:
 
 env:
-  # Elastic Beanstalk 環境のバージョン。
-  NODE_VERSION: 16.x
+  # ビルドに使う Node.js・npm のバージョン。Elastic Beanstalk 環境も Node.js 26 のプラットフォームにしてください。
+  NODE_VERSION: 26
+  NPM_VERSION: 12.2.3
   AWS_REGION: ap-northeast-1
   SHOPIFY_API_KEY: ${{ secrets.SHOPIFY_API_KEY }}
   AWS_EB_APP_NAME: ${{ secrets.AWS_EB_APP_NAME }}
@@ -24,26 +25,30 @@ jobs:
       contents: read
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
 
     - name: Set up Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v7
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: npm
+        cache-dependency-path: |
+          web/package-lock.json
+          web/frontend/package-lock.json
+
+    - run: npm install -g npm@${{ env.NPM_VERSION }}
 
     # Dockerfile の RUN にあたるもの。
     # web 直下の依存パッケージをインストールします。
-    # npm install sqlite3 では、 napi-v6-linux-glibc-arm64 を入手できない。
-    # 公式サイトを参考に arm64 用のモジュールを入手する。
+    # Elastic Beanstalk は arm64 のため、npm_config_arch=arm64 を指定して
+    # sqlite3 の linux arm64 用ビルド済みバイナリを取得します。
     # https://www.npmjs.com/package/sqlite3
     - run: |
         cd web
         pwd
         npm ci
-        cd node_modules/sqlite3/lib/binding
-        curl -OL https://github.com/TryGhost/node-sqlite3/releases/download/v5.1.2/napi-v6-linux-glibc-arm64.tar.gz
-        tar -xvf napi-v6-linux-glibc-arm64.tar.gz
+      env:
+        npm_config_arch: arm64
 
     # こちらも Dockerfile の RUN にあたるもの。
     # web/frontend 直下をビルドします。
@@ -62,9 +67,7 @@ jobs:
         zip deploy_package.zip . -ry
 
     # NOTE: 下記の認証、 S3 への UL にはすべて Role の権限を利用します。
-    # NOTE: v1-node16 については、この通り↓
-    #       https://github.com/aws-actions/configure-aws-credentials#notice-node12-deprecation-warning
-    - uses: aws-actions/configure-aws-credentials@v1-node16
+    - uses: aws-actions/configure-aws-credentials@v6
       with:
         role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
         role-session-name: deploy-role-session
