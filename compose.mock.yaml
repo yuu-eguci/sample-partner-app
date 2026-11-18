@@ -1,0 +1,75 @@
+# モック Shopify で動作確認するための追加定義です (実際の Shopify には接続しません)。
+#   docker compose -f compose.yaml -f compose.mock.yaml up --build -d
+#   docker compose -f compose.yaml -f compose.mock.yaml run --rm smoke
+#   docker compose -f compose.yaml -f compose.mock.yaml down -v
+#
+# モック Shopify は外部に接続できない内部ネットワーク (mock) にだけ参加し、
+# そのネットワーク内で mock-shop.myshopify.com として名前解決されます。
+x-mock-values: &mock-values
+  MOCK_SHOP: mock-shop.myshopify.com
+  MOCK_API_KEY: mock-api-key
+  MOCK_API_SECRET: mock-api-secret
+  MOCK_SCOPES: write_products,read_discounts
+
+services:
+  app:
+    build:
+      args:
+        SHOPIFY_API_KEY: mock-api-key
+    environment:
+      SHOPIFY_API_KEY: mock-api-key
+      SHOPIFY_API_SECRET: mock-api-secret
+      SCOPES: write_products,read_discounts
+      HOST: http://app:8081
+      NODE_EXTRA_CA_CERTS: /certs/mock-shopify.pem
+    volumes:
+      - mock-certs:/certs:ro
+    networks:
+      - default
+      - mock
+    depends_on:
+      mock-shopify:
+        condition: service_healthy
+
+  mock-shopify:
+    build: mock/shopify
+    environment: *mock-values
+    volumes:
+      - mock-certs:/certs
+    networks:
+      mock:
+        aliases:
+          - mock-shop.myshopify.com
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('https').get({host:'127.0.0.1',path:'/health',rejectUnauthorized:false},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  smoke:
+    image: node:26-alpine
+    profiles: ["test"]
+    command: ["node", "/mock/smoke-test.mjs"]
+    environment:
+      <<: *mock-values
+      APP_URL: http://app:8081
+      NODE_EXTRA_CA_CERTS: /certs/mock-shopify.pem
+    volumes:
+      - ./mock/smoke-test.mjs:/mock/smoke-test.mjs:ro
+      - mock-certs:/certs:ro
+    networks:
+      - mock
+    depends_on:
+      app:
+        condition: service_healthy
+
+networks:
+  mock:
+    internal: true
+
+volumes:
+  mock-certs:

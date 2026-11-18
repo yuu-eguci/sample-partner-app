@@ -1,0 +1,21 @@
+# 本番用 image を build して起動します。設定値は .env から読み込みます (README を参照してください)。
+#   docker compose up --build
+services:
+  app:
+    build:
+      context: .
+      args:
+        # フロントエンドのビルドに使う公開の API キー (Client ID) です。
+        SHOPIFY_API_KEY: ${SHOPIFY_API_KEY:-}
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "8081"
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12

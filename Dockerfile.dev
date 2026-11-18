@@ -1,4 +1,5 @@
-FROM node:18-alpine
+FROM node:26-alpine
+RUN npm install -g npm@12.2.3 && npm cache clean --force
 
 # 本番用では npm run build のために ARG SHOPIFY_API_KEY が必要。
 # この開発用 Dockerfile では、 build を CMD で行う
